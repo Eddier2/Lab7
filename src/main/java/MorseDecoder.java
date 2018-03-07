@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidParameterException;
@@ -53,6 +54,11 @@ public class MorseDecoder {
 
         double[] sampleBuffer = new double[BIN_SIZE * inputFile.getNumChannels()];
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
+            int framesRead = inputFile.readFrames(sampleBuffer, BIN_SIZE);
+            returnBuffer[binIndex] = 0;
+            for (int i = 0; i < sampleBuffer.length; i++) {
+                returnBuffer[binIndex] += Math.abs(sampleBuffer[i]);
+            }
             // Get the right number of samples from the inputFile
             // Sum all the samples together and store them in the returnBuffer
         }
@@ -81,14 +87,40 @@ public class MorseDecoder {
          * There are four conditions to handle. Symbols should only be output when you see
          * transitions. You will also have to store how much power or silence you have seen.
          */
+        int timeCount = 0;
+        String morse = "";
+        int last = 0;
+        boolean lasty = false;
+        for (double num : powerMeasurements) {
+            if (num > POWER_THRESHOLD) {
+                timeCount++;
+            } else {
+                if (timeCount >= DASH_BIN_COUNT) {
+                    morse += "-";
+                    last = 0;
+                    lasty = false;
+                } else if (timeCount > 0) {
+                    morse += ".";
+                    last = 0;
+                    lasty = false;
+                } else {
+                    last++;
+                }
+                if (last >= DASH_BIN_COUNT && !lasty) {
+                    morse += " ";
+                    last = 0;
+                    lasty = true;
+                }
+                timeCount = 0;
+            }
+        }
+            // if ispower and waspower
+            // else if ispower and not waspower
+            // else if issilence and wassilence
+            // else if issilence and not wassilence
 
-        // if ispower and waspower
-        // else if ispower and not waspower
-        // else if issilence and wassilence
-        // else if issilence and not wassilence
-
-        return "";
-    }
+            return "";
+        }
 
     /**
      * Morse code to alpha mapping.
